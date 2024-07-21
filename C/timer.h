@@ -5,15 +5,15 @@
 #include <functional>
 #include <iostream>
 
-class Timer {
+class timer {
 
     static std::chrono::milliseconds timeFunction(
             auto function
     ) {
-        auto start = std::chrono::high_resolution_clock::now();
+        const auto start = std::chrono::high_resolution_clock::now();
         function();
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = duration_cast<std::chrono::milliseconds>(stop - start);
+        const auto stop = std::chrono::high_resolution_clock::now();
+        const auto duration = duration_cast<std::chrono::milliseconds>(stop - start);
         return duration;
     }
 

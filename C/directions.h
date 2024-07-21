@@ -32,7 +32,7 @@ namespace DirectionData {
 DirectionData::AllDirectionData calculateAllDirectionData();
 
 std::map<CSV::Column, std::vector<int>> calculateDirectionDataForOne(
-        const std::string &fileName,
+        const std::string &destinationFilePath,
         DirectionData::StockData &stockData
 );
 

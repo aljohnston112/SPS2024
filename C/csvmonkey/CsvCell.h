@@ -3,12 +3,9 @@
 
 #include <cstddef>
 #include <string>
-#include <charconv>
 
 namespace csvmonkey {
-
     struct CsvCell {
-
         const char *ptr;
         size_t size;
 
@@ -17,9 +14,7 @@ namespace csvmonkey {
         [[nodiscard]] double as_double() const;
 
         [[nodiscard]] int as_int() const;
-
     };
-
 }
 
 #endif //WAVELET_CSVCELL_H

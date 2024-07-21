@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <memory>
 #include <sstream>
 
 #include "csv_util.h"
@@ -8,7 +7,6 @@
 #include "csvmonkey/MappedFileCursor.h"
 
 namespace CSV {
-
 
     std::string ColumnToString(Column col) {
         switch (col) {

@@ -11,7 +11,7 @@
 
 void writeCsv(
         const std::string &filePath,
-        const std::map<CSV::Column, std::vector<int>> &data
+        std::map<CSV::Column, std::vector<int>> &data
 );
 
 #endif //WAVELET_CSVWRITER_H

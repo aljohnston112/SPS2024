@@ -1,6 +1,6 @@
 #include <iostream>
 #include <future>
-#include "ThreadPool.h"
+#include "thread_pool.h"
 
 namespace thread_pool {
 
@@ -71,19 +71,19 @@ namespace thread_pool {
 
     std::shared_ptr<ThreadPool> ThreadPool::getCPUWorkInstance() {
         static std::shared_ptr<ThreadPool> thread_pool =
-                std::make_shared<ThreadPool>(8);
+                std::make_shared<ThreadPool>(12);
         return thread_pool;
     }
 
     std::shared_ptr<ThreadPool> ThreadPool::getDiskReadInstance() {
         static std::shared_ptr<ThreadPool> thread_pool =
-                std::make_shared<ThreadPool>(8);
+                std::make_shared<ThreadPool>(12);
         return thread_pool;
     }
 
     std::shared_ptr<ThreadPool> ThreadPool::getDiskWriteInstance() {
         static std::shared_ptr<ThreadPool> thread_pool =
-                std::make_shared<ThreadPool>(8);
+                std::make_shared<ThreadPool>(12);
         return thread_pool;
     }
 
