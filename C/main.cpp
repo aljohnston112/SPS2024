@@ -146,22 +146,22 @@ void process(size_t num = 0) {
 
                             const auto globalLength = directionData.begin()->second.size();
 
-                            const auto &highDataVector = stockData[CSV::high];
-                            const auto &lowDataVector = stockData[CSV::low];
-                            const auto &monthDirectionVector = directionData[CSV::Column::month];
-                            const auto &dayDirectionVector = directionData[CSV::Column::day];
-                            const auto &openDirectionVector = directionData[CSV::Column::open];
-                            const auto &highDirectionVector = directionData[CSV::Column::high];
-                            const auto &lowDirectionVector = directionData[CSV::Column::low];
-                            const auto &closeDirectionVector = directionData[CSV::Column::close];
-                            const auto &volumeDirectionVector = directionData[CSV::Column::volume];
+                            const auto &highDataVector = stockData.find(CSV::high)->second;
+                            const auto &lowDataVector = stockData.find(CSV::low)->second;
+                            const auto &monthDirectionVector = directionData.find(CSV::month)->second;
+                            const auto &dayDirectionVector = directionData.find(CSV::day)->second;
+                            const auto &openDirectionVector = directionData.find(CSV::open)->second;
+                            const auto &highDirectionVector = directionData.find(CSV::high)->second;
+                            const auto &lowDirectionVector = directionData.find(CSV::low)->second;
+                            const auto &closeDirectionVector = directionData.find(CSV::close)->second;
+                            const auto &volumeDirectionVector = directionData.find(CSV::volume)->second;
 
                             constexpr int daysPerYear = 252;
                             // const int daysPerMonth = 21;
                             constexpr size_t originalLength = daysPerYear;
                             size_t length = globalLength;
                             double chunkPercent = 1.0;
-                            //                                for (size_t start = 0; start <= globalLength; start += length) {
+                            // for (size_t start = 0; start <= globalLength; start += length) {
                             for (size_t start = globalLength - length - 1;
                                  start <= globalLength; start += length) {
                                 const auto *highData = highDataVector.data();

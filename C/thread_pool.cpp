@@ -62,28 +62,25 @@ namespace thread_pool {
     }
 
     unsigned int ThreadPool::getNumberOfThreads() {
-        static unsigned int numThreads = std::max(
-                std::thread::hardware_concurrency() - 1,
-                7u
-        );
+        static unsigned int numThreads = std::thread::hardware_concurrency();
         return numThreads;
     }
 
     std::shared_ptr<ThreadPool> ThreadPool::getCPUWorkInstance() {
         static std::shared_ptr<ThreadPool> thread_pool =
-                std::make_shared<ThreadPool>(12);
+                std::make_shared<ThreadPool>(getNumberOfThreads());
         return thread_pool;
     }
 
     std::shared_ptr<ThreadPool> ThreadPool::getDiskReadInstance() {
         static std::shared_ptr<ThreadPool> thread_pool =
-                std::make_shared<ThreadPool>(12);
+                std::make_shared<ThreadPool>(getNumberOfThreads());
         return thread_pool;
     }
 
     std::shared_ptr<ThreadPool> ThreadPool::getDiskWriteInstance() {
         static std::shared_ptr<ThreadPool> thread_pool =
-                std::make_shared<ThreadPool>(12);
+                std::make_shared<ThreadPool>(getNumberOfThreads());
         return thread_pool;
     }
 
