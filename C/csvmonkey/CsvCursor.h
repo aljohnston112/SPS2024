@@ -16,12 +16,11 @@ namespace csvmonkey {
 
         CsvCursor()
             : cells(32),
-              count(0) {
-        }
+              count(0) {}
 
-        CsvCell *by_value(
-            const std::string &value
-        );
+        [[nodiscard]] const CsvCell* with_column_name(
+            const std::string& value
+        ) const ;
     };
 }
 

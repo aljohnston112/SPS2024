@@ -1,15 +1,18 @@
+#include <cstring>
+#include <fcntl.h>
 #include <ranges>
+#include <sys/mman.h>
 
+#include "../csv//csv_util.h"
 #include "CsvWriter.h"
 
 void writeCsv(
-    const std::string &filePath,
-    std::vector<std::vector<int> > &data
+    const std::string& filePath,
+    std::vector<std::vector<int>>& data
 ) {
     const int fd = open(
         filePath.c_str(),
-        O_RDWR | O_CREAT,
-        S_IRUSR | S_IRGRP | S_IROTH
+        O_RDWR | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH
     );
 
     if (fd == -1) {
@@ -17,38 +20,45 @@ void writeCsv(
     }
 
     size_t fileSize = 0;
-
-    std::vector<std::vector<std::string> > dataStrings;
-    std::string header;
+    std::vector<std::vector<std::string>> dataStrings;
     const auto it = dataStrings.begin();
-    for (int key = 0; key < data.size(); key++) {
+    for (size_t key = 0; key < data.size(); key++) {
         dataStrings.emplace(
-            it + key
+            it + static_cast<int>(key)
         );
-        header += ColumnToString(CSV::Column{key});
+    }
+
+    // Create the header
+    std::string header;
+    for (size_t key = 0; key < data.size(); key++) {
+        header += ColumnToString(
+            CSV::Column{static_cast<int>(key)}
+        );
         header += ',';
     }
     header.back() = '\n';
     fileSize += header.size();
 
-    for (int key = 0; key < data.size(); key++) {
+    // Create the data rows
+    for (size_t key = 0; key < data.size(); key++) {
         for (
-            std::vector<int> &series = data[key];
-            const auto &data_point: series
+            std::vector<int>& series = data[key];
+            const auto& data_point : series
         ) {
             auto data_point_as_text = std::to_string(data_point);
             fileSize += data_point_as_text.size() + 1;
-            dataStrings[CSV::Column{key}].push_back(data_point_as_text);
+            dataStrings[CSV::Column{static_cast<int>(key)}].push_back(data_point_as_text);
         }
     }
 
-    if (lseek(fd, fileSize - 1, SEEK_SET) == -1) {
+    // Fill the file with nothing
+    if (lseek(fd, static_cast<long>(fileSize - 1), SEEK_SET) == -1) {
         perror("Error seeking in file");
     }
+    write(fd, reinterpret_cast<const void*>(""), 1);
 
-    write(fd, "", 1);
-
-    auto *map = static_cast<char *>(
+    // Map into memory
+    auto* map = static_cast<char*>(
         mmap(
             nullptr,
             fileSize,
@@ -64,6 +74,7 @@ void writeCsv(
     }
 
     // Copy data to memory map
+    // The header
     size_t offset = 0;
     std::memcpy(
         map,
@@ -72,9 +83,10 @@ void writeCsv(
     );
     offset += header.size();
 
-    for (int i = 0; i < dataStrings.begin()->size(); i++) {
-        for (int key = 0; key < data.size(); key++) {
-            auto str = dataStrings[CSV::Column{key}][i];
+    // The data rows
+    for (size_t i = 0; i < dataStrings.begin()->size(); i++) {
+        for (size_t key = 0; key < data.size(); key++) {
+            auto str = dataStrings[CSV::Column{static_cast<int>(key)}][i];
             std::memcpy(
                 map + offset,
                 str.c_str(),

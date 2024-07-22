@@ -1,19 +1,15 @@
 #ifndef WAVELET_THREADPOOL_H
 #define WAVELET_THREADPOOL_H
 
-#include <functional>
-#include <thread>
-#include <queue>
 #include <condition_variable>
-#include <map>
-
+#include <functional>
+#include <queue>
+#include <thread>
 
 namespace thread_pool {
-
-    using Function = std::move_only_function<void(void)>;
+    using Function = std::move_only_function<void()>;
 
     class ThreadPool {
-
         std::vector<std::jthread> threads{};
 
         std::mutex mutex;
@@ -33,64 +29,62 @@ namespace thread_pool {
 
         static std::shared_ptr<ThreadPool> getDiskWriteInstance();
 
-        void addTasks(std::vector<Function> &functions);
+        void addTasks(std::vector<Function>& functions);
 
-        void addTask(Function &&function);
+        void addTask(Function&& function);
 
         ~ThreadPool();
 
-        template<
-                class PromiseResult,
-                class ParameterType
+        template <
+            class PromiseResult,
+            class ParameterType
         >
         void submit(
-                std::vector<std::future<PromiseResult>> &futures,
-                std::function<void(ParameterType &&, std::promise<PromiseResult> &&)> function,
-                ParameterType &data
+            std::vector<std::future<PromiseResult>>& futures,
+            std::function<void(ParameterType&&, std::promise<PromiseResult>&&)> function,
+            ParameterType& data
         ) {
             auto promise = std::promise<PromiseResult>();
             futures.emplace_back(promise.get_future());
             addTask(
-                    [
-                            function = std::move(function),
-                            namedSeries = std::move(data),
-                            promise = std::move(promise)
-                    ] mutable {
-                        function(
-                                std::move(namedSeries),
-                                std::move(promise)
-                        );
-                    }
+                [
+                    function = std::move(function),
+                    namedSeries = std::move(data),
+                    promise = std::move(promise)
+                ] mutable {
+                    function(
+                        std::move(namedSeries),
+                        std::move(promise)
+                    );
+                }
             );
         }
 
-        template<
-                class PromiseResult,
-                class DataContainer,
-                class ParameterType
+        template <
+            class PromiseResult,
+            class DataContainer,
+            class ParameterType
         >
         std::vector<PromiseResult> createAndRunTasks(
-                std::function<void(ParameterType &&, std::promise<PromiseResult> &&)> &&function,
-                DataContainer &allData
+            std::function<void(ParameterType&&, std::promise<PromiseResult>&&)>&& function,
+            DataContainer& allData
         ) {
             std::vector<PromiseResult> results{};
             std::vector<std::future<PromiseResult>> futures;
-            for (auto &data: allData) {
+            for (ParameterType& data : allData) {
                 submit(
-                        futures,
-                        function,
-                        data
+                    futures,
+                    function,
+                    data
                 );
             }
-            for (auto &future: futures) {
+            for (auto& future : futures) {
                 auto result = future.get();
                 results.emplace_back(result);
             }
             return results;
         }
-
     };
-
 }
 
 #endif //WAVELET_THREADPOOL_H

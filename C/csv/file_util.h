@@ -13,12 +13,12 @@
  * @param destination_folder The destination folder.
  */
 void move_files_recursively_to_single_folder(
-    const std::string &source_folder,
-    const std::string &destination_folder
+    const std::string& source_folder,
+    const std::string& destination_folder
 );
 
 std::vector<std::string> getAllFilesPaths(
-    const std::string &folder
+    const std::string& folder
 );
 
 #endif //MAIN_FILE_UTIL_H

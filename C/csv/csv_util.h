@@ -4,12 +4,11 @@
 #include <string>
 #include <vector>
 
-#include "csvmonkey/MappedFileCursor.h"
-#include "csvmonkey/CsvReader.h"
-#include "csvmonkey/CsvCell.h"
+#include "../csvmonkey/CsvCell.h"
+#include "../csvmonkey/CsvReader.h"
+#include "../csvmonkey/MappedFileCursor.h"
 
 namespace CSV {
-
         enum Column: int {
                 month = 0,
                 day = 1,
@@ -22,34 +21,36 @@ namespace CSV {
 
         std::string ColumnToString(Column column);
 
-        std::vector<std::vector<double> > readStockCSV(
-                const std::string &filename
+        std::vector<std::vector<double>> readStockCSV(
+                const std::string& filename
         );
 
-        std::string extract_symbol(const std::string &path);
+        std::string extract_symbol(const std::string& path);
 
-        template<class T>
-        std::vector<std::vector<T> > readCSV(
-                const std::string &filename
+        template <class T>
+        std::vector<std::vector<T>> readCSV(
+                const std::string& filename
         ) {
                 csvmonkey::MappedFileCursor file{};
                 file.open(filename.c_str());
                 csvmonkey::CsvReader reader(file);
                 reader.read_row();
-                csvmonkey::CsvCell *monthCell =
-                                reader.row().by_value("month");
-                csvmonkey::CsvCell *dayCell =
-                                reader.row().by_value("day");
-                csvmonkey::CsvCell *openCell =
-                                reader.row().by_value("open");
-                csvmonkey::CsvCell *highCell =
-                                reader.row().by_value("high");
-                csvmonkey::CsvCell *lowCell =
-                                reader.row().by_value("low");
-                csvmonkey::CsvCell *closeCell =
-                                reader.row().by_value("close");
-                csvmonkey::CsvCell *volumeCell =
-                                reader.row().by_value("volume");
+
+                const auto& row = reader.row();
+                const csvmonkey::CsvCell* monthCell =
+                        row.with_column_name("month");
+                const csvmonkey::CsvCell* dayCell =
+                        row.with_column_name("day");
+                const csvmonkey::CsvCell* openCell =
+                        row.with_column_name("open");
+                const csvmonkey::CsvCell* highCell =
+                        row.with_column_name("high");
+                const csvmonkey::CsvCell* lowCell =
+                        row.with_column_name("low");
+                const csvmonkey::CsvCell* closeCell =
+                        row.with_column_name("close");
+                const csvmonkey::CsvCell* volumeCell =
+                        row.with_column_name("volume");
 
                 auto monthVector = std::vector<T>{};
                 auto dayVector = std::vector<T>{};
@@ -60,15 +61,17 @@ namespace CSV {
                 auto volumeVector = std::vector<T>{};
 
                 T (csvmonkey::CsvCell::*t)() const;
-                if constexpr (std::is_same<T, int>::value) {
-                        t = &csvmonkey::CsvCell::as_int;
-                } else if constexpr (std::is_same<T, double>::value) {
-                        t = &csvmonkey::CsvCell::as_double;
+                if constexpr (std::is_same_v<T, int>) {
+                        t = &csvmonkey::CsvCell::from_chars_as_type<int>;
+                }
+                else if constexpr (std::is_same_v<T, double>) {
+                        t = &csvmonkey::CsvCell::from_chars_as_type<double>;
                 }
                 while (reader.read_row()) {
                         monthVector.push_back(
                                 (monthCell->*t)()
                         );
+
                         dayVector.push_back(
                                 (dayCell->*t)()
                         );
