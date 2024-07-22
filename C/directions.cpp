@@ -19,18 +19,18 @@ DirectionData::AllDirectionData calculateAllDirectionData() {
 
         auto promise = std::promise<DirectionData::AllDirectionDataResults>();
         futures.emplace_back(promise.get_future());
-        DirectionData::AllDirectionData results = thread_pool::ThreadPool::getDiskReadInstance()
+        DirectionData::AllDirectionData results{};
+        auto r = thread_pool::ThreadPool::getDiskReadInstance()
                         ->createAndRunTasks<
                                 DirectionData::AllDirectionDataResults,
                                 std::vector<std::string>,
-                                std::string,
-                                DirectionData::AllDirectionData
+                                std::string
                         >(
                                 calculateDirectionData,
                                 stockDataFilePaths
                         );
 
-        for (auto &result: results) {
+        for (auto &result: r) {
                 results.emplace(result);
         }
         return results;
@@ -48,24 +48,26 @@ void saveDirectionData(
 
 DirectionData::DirectionData calculateDirectionDataForOne(
         const std::string &destinationFilePath,
-        std::map<CSV::Column, std::vector<double> > &stockData
+        DirectionData::StockData &stockData
 ) {
         // Add worker tasks to calculate direction stockData
+        std::vector<DirectionData::NamedSeries> namedSeries{};
+        const auto it = namedSeries.begin();
+        for (int i = 0; i < stockData.size(); i++) {
+                namedSeries.emplace(
+                        it + i,
+                        std::pair{CSV::Column{i}, stockData.at(i)}
+                );
+        }
         DirectionData::DirectionData directionData = thread_pool::ThreadPool::getCPUWorkInstance()
                         ->createAndRunTasks<
                                 DirectionData::DirectionDataResults,
-                                std::map<CSV::Column, std::vector<double> >,
-                                std::pair<const CSV::Column, std::vector<double> >,
-                                DirectionData::DirectionData
+                                DirectionData::AllNamedSeries,
+                                DirectionData::NamedSeries
                         >(
                                 calculateDirectionDataForNamedSeries,
-                                stockData
+                                namedSeries
                         );
-
-        // Extract the direction stockData
-        for (auto &result: directionData) {
-                directionData.emplace(result);
-        }
 
         // Write the directionData to disk
         std::filesystem::create_directory(sps_config::final_data_folder);
@@ -97,7 +99,7 @@ void calculateDirectionData(
         if (std::filesystem::exists(directionFilePath)) {
                 directionData = CSV::readCSV<int>(directionFilePath);
         } else {
-                std::map<CSV::Column, std::vector<double> > data =
+                std::vector<std::vector<double> > data =
                                 CSV::readStockCSV(stockDataFilePath);
                 directionData = calculateDirectionDataForOne(
                         directionFilePath,
@@ -130,9 +132,6 @@ void calculateDirectionDataForNamedSeries(
                 currentVector.push_back(result);
         }
         promise.set_value(
-                std::pair(
-                        namedSeries.first,
-                        currentVector
-                )
+                currentVector
         );
 }

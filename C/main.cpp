@@ -43,15 +43,11 @@ void process(size_t num = 0) {
         thread_pool::ThreadPool::getCPUWorkInstance()->addTask(
             [&direction_data, p = std::move(promise)] {
                 std::map<ulong, uint> countResults{};
-                const auto length = direction_data.begin()->second.size();
+                const auto length = direction_data.begin()->size();
                 for (int i = 0; i < length; ++i) {
                     uint bits = 0;
-                    int j = 0;
-                    for (
-                        const auto &direction_series:
-                        std::views::values(direction_data)
-                    ) {
-                        bits += direction_series[i] << j++;
+                    for (int j = 0; j < direction_data.size(); j++) {
+                        bits += direction_data[j][i] << j++;
                     }
                     countResults[bits]++;
                 }
@@ -80,18 +76,18 @@ void process(size_t num = 0) {
         std::future<
             std::pair<
                 std::string,
-                std::map<CSV::Column, std::vector<double> >
+                DirectionData::StockData
             >
         >
     > stockFutures{};
 
-    std::unordered_map<std::string, std::map<CSV::Column, std::vector<double> > > stockFiles{};
+    std::unordered_map<std::string, DirectionData::StockData> stockFiles{};
     for (const auto &directionPair: directions) {
         auto promise = std::make_shared<
             std::promise<
                 std::pair<
                     std::string,
-                    std::map<CSV::Column, std::vector<double> >
+                    DirectionData::StockData
                 >
             >
         >();
@@ -144,17 +140,17 @@ void process(size_t num = 0) {
                         for (auto &[symbol, directionData]: directions) {
                             auto &stockData = stockFiles[symbol];
 
-                            const auto globalLength = directionData.begin()->second.size();
+                            const auto globalLength = directionData.begin()->size();
 
-                            const auto &highDataVector = stockData.find(CSV::high)->second;
-                            const auto &lowDataVector = stockData.find(CSV::low)->second;
-                            const auto &monthDirectionVector = directionData.find(CSV::month)->second;
-                            const auto &dayDirectionVector = directionData.find(CSV::day)->second;
-                            const auto &openDirectionVector = directionData.find(CSV::open)->second;
-                            const auto &highDirectionVector = directionData.find(CSV::high)->second;
-                            const auto &lowDirectionVector = directionData.find(CSV::low)->second;
-                            const auto &closeDirectionVector = directionData.find(CSV::close)->second;
-                            const auto &volumeDirectionVector = directionData.find(CSV::volume)->second;
+                            const auto &highDataVector = stockData.at(CSV::high);
+                            const auto &lowDataVector = stockData.at(CSV::low);
+                            const auto &monthDirectionVector = directionData.at(CSV::month);
+                            const auto &dayDirectionVector = directionData.at(CSV::day);
+                            const auto &openDirectionVector = directionData.at(CSV::open);
+                            const auto &highDirectionVector = directionData.at(CSV::high);
+                            const auto &lowDirectionVector = directionData.at(CSV::low);
+                            const auto &closeDirectionVector = directionData.at(CSV::close);
+                            const auto &volumeDirectionVector = directionData.at(CSV::volume);
 
                             constexpr int daysPerYear = 252;
                             // const int daysPerMonth = 21;
@@ -311,9 +307,9 @@ void process(size_t num = 0) {
     }
 }
 
-std::map<CSV::Column, std::vector<int> > processFirst() {
+DirectionData::DirectionData processFirst() {
     const std::string stockDataFilePath = sps_config::intermediate_data_folder + "a.us.txt";
-    std::map<CSV::Column, std::vector<double> > data = CSV::readStockCSV(stockDataFilePath);
+    DirectionData::StockData data = CSV::readStockCSV(stockDataFilePath);
     const std::string symbol = CSV::extract_symbol(stockDataFilePath);
     const std::string directionFilePath = sps_config::direction_data_folder + symbol + ".txt";
     auto directions =

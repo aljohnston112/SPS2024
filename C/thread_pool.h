@@ -67,14 +67,13 @@ namespace thread_pool {
         template<
                 class PromiseResult,
                 class DataContainer,
-                class ParameterType,
-                class ReturnContainer
+                class ParameterType
         >
-        ReturnContainer createAndRunTasks(
+        std::vector<PromiseResult> createAndRunTasks(
                 std::function<void(ParameterType &&, std::promise<PromiseResult> &&)> &&function,
                 DataContainer &allData
         ) {
-            ReturnContainer results{};
+            std::vector<PromiseResult> results{};
             std::vector<std::future<PromiseResult>> futures;
             for (auto &data: allData) {
                 submit(
@@ -85,7 +84,7 @@ namespace thread_pool {
             }
             for (auto &future: futures) {
                 auto result = future.get();
-                results.emplace(result);
+                results.emplace_back(result);
             }
             return results;
         }

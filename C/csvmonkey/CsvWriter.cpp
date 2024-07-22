@@ -4,8 +4,7 @@
 
 void writeCsv(
     const std::string &filePath,
-    std::map<CSV::Column,
-        std::vector<int>> &data
+    std::vector<std::vector<int> > &data
 ) {
     const int fd = open(
         filePath.c_str(),
@@ -19,38 +18,27 @@ void writeCsv(
 
     size_t fileSize = 0;
 
-    std::map<
-        CSV::Column,
-        std::vector<std::string>
-    > dataStrings;
+    std::vector<std::vector<std::string> > dataStrings;
     std::string header;
-    for (
-        const auto &key:
-        std::views::keys(data)
-    ) {
+    const auto it = dataStrings.begin();
+    for (int key = 0; key < data.size(); key++) {
         dataStrings.emplace(
-            key,
-            std::vector<std::string>()
+            it + key
         );
-        header += ColumnToString(key);
+        header += ColumnToString(CSV::Column{key});
         header += ',';
     }
     header.back() = '\n';
     fileSize += header.size();
 
-    for (
-        const auto &[key, value]:
-        data
-    ) {
-        CSV::Column column = key;
+    for (int key = 0; key < data.size(); key++) {
         for (
-            std::vector<int> series = value;
-            const auto &data_point:
-            series
+            std::vector<int> &series = data[key];
+            const auto &data_point: series
         ) {
             auto data_point_as_text = std::to_string(data_point);
             fileSize += data_point_as_text.size() + 1;
-            dataStrings[column].push_back(data_point_as_text);
+            dataStrings[CSV::Column{key}].push_back(data_point_as_text);
         }
     }
 
@@ -84,10 +72,9 @@ void writeCsv(
     );
     offset += header.size();
 
-    for (int i = 0; i < dataStrings.begin()->second.size(); i++) {
-        for (const auto &d: data) {
-            CSV::Column column = d.first;
-            auto str = dataStrings[column][i];
+    for (int i = 0; i < dataStrings.begin()->size(); i++) {
+        for (int key = 0; key < data.size(); key++) {
+            auto str = dataStrings[CSV::Column{key}][i];
             std::memcpy(
                 map + offset,
                 str.c_str(),

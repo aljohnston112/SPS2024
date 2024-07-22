@@ -8,8 +8,8 @@
 
 namespace CSV {
 
-    std::string ColumnToString(Column col) {
-        switch (col) {
+    std::string ColumnToString(Column column) {
+        switch (column) {
             case month:
                 return "month";
             case day:
@@ -29,7 +29,7 @@ namespace CSV {
         }
     }
 
-    std::map<Column, std::vector<double>> readStockCSV(
+    std::vector<std::vector<double>> readStockCSV(
             const std::string &filename
     ) {
 
@@ -97,14 +97,14 @@ namespace CSV {
             );
         }
 
-        std::map<Column, std::vector<double>> data{};
-        data.emplace(std::pair{month, monthVector});
-        data.emplace(std::pair{day, dayVector});
-        data.emplace(std::pair{open, openVector});
-        data.emplace(std::pair{high, highVector});
-        data.emplace(std::pair{low, lowVector});
-        data.emplace(std::pair{close, closeVector});
-        data.emplace(std::pair{volume, volumeVector});
+        std::vector<std::vector<double>> data{};
+        data.emplace_back(monthVector);
+        data.emplace_back(dayVector);
+        data.emplace_back(openVector);
+        data.emplace_back(highVector);
+        data.emplace_back(lowVector);
+        data.emplace_back(closeVector);
+        data.emplace_back(volumeVector);
         return data;
 
 //        std::ifstream file(filename);
