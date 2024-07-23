@@ -49,6 +49,7 @@ DirectionData::DirectionData calculateDirectionDataForOne(
 ) {
     // Add column labels
     std::vector<DirectionData::NamedSeries> namedSeries{};
+    namedSeries.reserve(stockData.size());
     const auto it = namedSeries.begin();
     for (size_t i = 0; i < stockData.size(); i++) {
         namedSeries.emplace(

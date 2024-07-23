@@ -1,6 +1,7 @@
 #ifndef WAVELET_DIRECTIONS_H
 #define WAVELET_DIRECTIONS_H
 
+#include <future>
 #include <map>
 
 #include "../csv/csv_util.h"

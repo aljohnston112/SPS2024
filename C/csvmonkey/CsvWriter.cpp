@@ -21,6 +21,7 @@ void writeCsv(
 
     size_t fileSize = 0;
     std::vector<std::vector<std::string>> dataStrings;
+    dataStrings.reserve(data.size());
     const auto it = dataStrings.begin();
     for (size_t key = 0; key < data.size(); key++) {
         dataStrings.emplace(
