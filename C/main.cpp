@@ -10,7 +10,7 @@
 #include "directions/directions.h"
 #include "thread_pool.h"
 #include "timer.h"
-#include "tree/ProbabilityTree.h"
+#include "tree.h"
 
 struct PairHash {
     template <typename T1, typename T2>
@@ -206,8 +206,7 @@ void process() {
                                     ) {
                                         buyPrice = highData[i + 2];
                                         bought = true;
-                                    }
-                                    else if (currentInt == sellInt && bought) {
+                                    } else if (currentInt == sellInt && bought) {
                                         if (
                                             const double sellPrice = lowData[i + 2];
                                             sellPrice != buyPrice && buyPrice != 0
@@ -223,8 +222,7 @@ void process() {
                                 const auto pair = std::pair(buyInt, sellInt);
                                 if (chunkPercent > 1.0) {
                                     globalGainCounts[pair] += 1;
-                                }
-                                else if (chunkPercent != 1.0) {
+                                } else if (chunkPercent != 1.0) {
                                     globalLossCounts[pair] += 1;
                                 }
                                 globalPercent += chunkPercent;
@@ -237,8 +235,7 @@ void process() {
                                 !globalNetData.contains(pair)
                             ) {
                                 globalNetData[pair] = globalPercent;
-                            }
-                            else {
+                            } else {
                                 globalNetData[pair] += globalPercent;
                             }
                             completedTasks++;
@@ -352,21 +349,17 @@ void readDataFromFile(
                 isCount = true;
                 isGain = true;
                 isNet = false;
-            }
-            else if (line.find("Global Loss Counts:") != std::string::npos) {
+            } else if (line.find("Global Loss Counts:") != std::string::npos) {
                 isCount = true;
                 isGain = false;
                 isNet = false;
-            }
-            else if (line.find("Global Win/Loss Ratios:") != std::string::npos) {
+            } else if (line.find("Global Win/Loss Ratios:") != std::string::npos) {
                 isCount = false;
                 isNet = false;
-            }
-            else if (line.find("Global Net Data:") != std::string::npos) {
+            } else if (line.find("Global Net Data:") != std::string::npos) {
                 isCount = false;
                 isNet = true;
-            }
-            else {
+            } else {
                 std::istringstream iss(line);
                 std::string token;
                 std::pair<ulong, ulong> patternPair;
@@ -377,11 +370,9 @@ void readDataFromFile(
                     std::istringstream line_stream(token);
                     if (count == 1) {
                         line_stream >> patternPair.first;
-                    }
-                    else if (count == 2) {
+                    } else if (count == 2) {
                         line_stream >> patternPair.second;
-                    }
-                    else if (count == 3) {
+                    } else if (count == 3) {
                         line_stream >> value;
                     }
                     ++count;
@@ -390,15 +381,12 @@ void readDataFromFile(
                 if (isCount) {
                     if (isGain) {
                         globalGainCounts.emplace(patternPair, value);
-                    }
-                    else {
+                    } else {
                         globalLossCounts.emplace(patternPair, value);
                     }
-                }
-                else if (isNet) {
+                } else if (isNet) {
                     globalNetData.emplace(patternPair, value);
-                }
-                else {
+                } else {
                     globalWinLossRatios.emplace_back(patternPair, value);
                 }
             }
@@ -408,14 +396,29 @@ void readDataFromFile(
     inFile.close();
 }
 
+template <class T>
+struct Hash final : IHash<T> {
+    size_t operator()(const T i) override {
+        return i;
+    }
+
+    T to_element(const size_t i) override {
+        return i;
+    }
+
+    size_t number_of_elements() override {
+        return 2;
+    }
+};
+
 int main() {
     timer::logFunctionTime(
         [] {
             auto directions = calculateAllDirectionData();
             auto allStockData = getAllStockData();
-            auto node = ProbabilityTree{Hash<int>()};
-            for (auto& direction : std::views::values(directions)) {
-                node.add(std::move(direction[CSV::low]));
+            auto tree = ProbabilityTree<Hash<int>, int>{};
+            for (auto& directionData : std::ranges::views::values(directions)) {
+                tree.add(directionData[CSV::low]);
             }
 
             uint globalGainCounts = 0;
@@ -423,16 +426,15 @@ int main() {
             double globalWinLossRatios;
             double globalNetData = 0;
 
-            std::mutex mutex;
             std::condition_variable cv;
-            size_t completedTasks = 0;
+            std::atomic<size_t> completedTasks = 0;
 
             thread_pool::ThreadPool::getCPUWorkInstance()->addTask(
                 [
-                    &node,
-                    &mutex, &cv, &completedTasks,
+                    &tree,
+                    &cv, &completedTasks,
                     &allStockData, &directions,
-                    &globalNetData, &globalGainCounts, &globalLossCounts, &globalWinLossRatios
+                    &globalNetData, &globalGainCounts, &globalLossCounts
                 ] {
                     double globalPercent = 1.0;
 
@@ -451,38 +453,37 @@ int main() {
                         size_t length = globalLength;
                         double chunkPercent = 1.0;
                         // for (size_t start = 0; start <= globalLength; start += length) {
-                        for (size_t start = globalLength - length;
-                             start < globalLength; start += length) {
+                        for (size_t start = globalLength - length; start < globalLength; start += length) {
                             const auto* highData = highDataVector.data();
                             const auto* lowData = lowDataVector.data();
                             const auto* lowDirectionData = lowDirectionVector.data();
-
                             if (globalLength <= start + length - 1) {
                                 length = globalLength - start;
                             }
 
                             lowData += start;
                             highData += start;
-                            lowDirectionData += start;
 
                             bool bought = false;
                             double buyPrice = 0;
                             for (size_t i = 0; i < length - 1; ++i) {
-                                const uint currentDirection = lowDirectionData[i];
-                                const auto& prediction = node.predict(
-                                    {lowDirectionData, lowDirectionData + i}
-                                );
+                                const int currentDirection = lowDirectionData[i];
                                 if (
+                                    const auto prediction = tree.predict(
+                                        {
+                                            lowDirectionData,
+                                            lowDirectionData + i
+                                        }
+                                    );
                                     prediction.has_value() &&
                                     currentDirection == 0 && prediction.value() == 1 && !bought
                                 ) {
                                     buyPrice = highData[i + 2];
                                     bought = true;
-                                }
-                                else if (
+                                } else if (
                                     prediction.has_value() &&
                                     currentDirection == 1 && prediction.value() == 0 && bought
-                                    ) {
+                                ) {
                                     if (
                                         const double sellPrice = lowData[i + 2];
                                         sellPrice != buyPrice && buyPrice != 0
@@ -495,36 +496,36 @@ int main() {
                             length = originalLength;
                         }
                         {
-                            if (chunkPercent > 1.0) {
+                            if (chunkPercent >= 1.0) {
                                 globalGainCounts += 1;
-                            }
-                            else if (chunkPercent != 1.0) {
+                                std::cout << "    " << chunkPercent << std::endl;
+                            } else {
                                 globalLossCounts += 1;
+                                std::cout << chunkPercent << std::endl;
                             }
                             globalPercent += chunkPercent;
                         }
                     }
                     {
-                        std::lock_guard lock(mutex);
                         if (
                             globalNetData == 0
                         ) {
                             globalNetData = globalPercent;
-                        }
-                        else {
+                        } else {
                             globalNetData += globalPercent;
                         }
-                        completedTasks++;
+                        completedTasks.fetch_add(1);
                     }
-                        cv.notify_one();
+                    cv.notify_one();
                 }
             );
 
             {
+                std::mutex mutex;
                 std::unique_lock lock(mutex);
                 cv.wait(
                     lock,
-                    [&completedTasks, &directions] {
+                    [&completedTasks] {
                         return 1 == completedTasks;
                     }
                 );

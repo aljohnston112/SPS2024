@@ -43,7 +43,6 @@ set(
         C/csvmonkey/CsvWriter.h
         C/config.h
         C/timer.h
-        C/tree/ProbabilityTree.h
 )
 
 
@@ -51,7 +50,7 @@ add_executable(
         SPS2024
         ${SOURCE_FILES}
         ${HEADER_FILES}
-        C/main2.cpp
+        C/tree.h
 )
 
 include(FetchContent)
