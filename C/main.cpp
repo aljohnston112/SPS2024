@@ -12,9 +12,11 @@
 #include "timer.h"
 #include "tree.h"
 
-struct PairHash {
+struct PairHash
+{
     template <typename T1, typename T2>
-    std::size_t operator()(const std::pair<T1, T2>& pair) const {
+    std::size_t operator()(const std::pair<T1, T2>& pair) const
+    {
         auto hash1 = std::hash<T1>{}(pair.first);
         auto hash2 = std::hash<T2>{}(pair.second);
         auto h = hash1 ^ (hash2 << 1);
@@ -27,12 +29,15 @@ struct PairHash {
 void countDirections(
     DirectionData::AllDirectionDataResults&& direction_data,
     std::promise<std::map<ulong, uint>>&& promise
-) {
+)
+{
     std::map<ulong, uint> countResults{};
     const auto length = direction_data.second.begin()->size();
-    for (size_t i = 0; i < length; ++i) {
+    for (size_t i = 0; i < length; ++i)
+    {
         uint bits = 0;
-        for (size_t j = 0; j < direction_data.second.size(); j++) {
+        for (size_t j = 0; j < direction_data.second.size(); j++)
+        {
             bits += direction_data.second[j][i] << j++;
         }
         countResults[bits]++;
@@ -42,7 +47,8 @@ void countDirections(
 
 std::map<ulong, uint> getCountResultsForAll(
     DirectionData::AllDirectionData directions
-) {
+)
+{
     auto countPromises =
         thread_pool::ThreadPool::getCPUWorkInstance()
         ->createAndRunTasks<
@@ -55,8 +61,10 @@ std::map<ulong, uint> getCountResultsForAll(
         );
 
     std::map<ulong, uint> countResultsForAll{};
-    for (auto& count : countPromises) {
-        for (const auto& [key, value] : count) {
+    for (auto& count : countPromises)
+    {
+        for (const auto& [key, value] : count)
+        {
             countResultsForAll[key] += value;
         }
     }
@@ -64,7 +72,8 @@ std::map<ulong, uint> getCountResultsForAll(
     auto resultFileName = sps_config::results_data_folder + "AllPatternCounts.txt";
     std::ofstream resultFile(resultFileName);
     size_t totalCount = 0;
-    for (const auto& [key, value] : countResultsForAll) {
+    for (const auto& [key, value] : countResultsForAll)
+    {
         resultFile << "Pattern: " << key << ", Count: " << value << "\n";
         totalCount += value;
     }
@@ -77,7 +86,8 @@ std::map<ulong, uint> getCountResultsForAll(
 void getStockDataForSingle(
     std::string&& fileName,
     std::promise<DirectionData::AllStockDataResults>&& promise
-) {
+)
+{
     auto symbol = CSV::extract_symbol(fileName);
     promise.set_value(
         {
@@ -87,7 +97,8 @@ void getStockDataForSingle(
     );
 }
 
-std::unordered_map<std::string, DirectionData::StockData> getAllStockData() {
+std::unordered_map<std::string, DirectionData::StockData> getAllStockData()
+{
     const std::string stockDataFolder = sps_config::intermediate_data_folder;
     auto filePaths = getAllFilesPaths(stockDataFolder);
 
@@ -103,7 +114,8 @@ std::unordered_map<std::string, DirectionData::StockData> getAllStockData() {
         );
 
     std::unordered_map<std::string, DirectionData::StockData> stockFiles{};
-    for (auto& stockData : stockDataResults) {
+    for (auto& stockData : stockDataResults)
+    {
         auto& [symbol, data] = stockData;
         stockFiles.emplace(
             symbol,
@@ -113,7 +125,8 @@ std::unordered_map<std::string, DirectionData::StockData> getAllStockData() {
     return stockFiles;
 }
 
-void process() {
+void process()
+{
     auto directions = calculateAllDirectionData();
     auto allStockData = getAllStockData();
     auto countResultsForAll = getCountResultsForAll(directions);
@@ -127,9 +140,12 @@ void process() {
     std::condition_variable cv;
     size_t completedTasks = 0;
 
-    for (const auto& sellInt : std::views::keys(countResultsForAll)) {
-        for (const auto& buyInt : std::views::keys(countResultsForAll)) {
-            if (sellInt != buyInt) {
+    for (const auto& sellInt : std::views::keys(countResultsForAll))
+    {
+        for (const auto& buyInt : std::views::keys(countResultsForAll))
+        {
+            if (sellInt != buyInt)
+            {
                 thread_pool::ThreadPool::getCPUWorkInstance()->addTask(
                     [
                         buyInt, sellInt,
@@ -137,10 +153,12 @@ void process() {
                         &allStockData, &directions,
                         &countResultsForAll,
                         &globalNetData, &globalGainCounts, &globalLossCounts
-                    ] {
+                    ]
+                    {
                         double globalPercent = 1.0;
 
-                        for (auto& [symbol, directionData] : directions) {
+                        for (auto& [symbol, directionData] : directions)
+                        {
                             auto& stockData = allStockData[symbol];
 
                             const auto globalLength = directionData.begin()->size();
@@ -162,7 +180,8 @@ void process() {
                             double chunkPercent = 1.0;
                             // for (size_t start = 0; start <= globalLength; start += length) {
                             for (size_t start = globalLength - length;
-                                 start <= globalLength; start += length) {
+                                 start <= globalLength; start += length)
+                            {
                                 const auto* highData = highDataVector.data();
                                 const auto* lowData = lowDataVector.data();
                                 const auto* monthDirectionData = monthDirectionVector.data();
@@ -173,7 +192,8 @@ void process() {
                                 const auto* closeDirectionData = closeDirectionVector.data();
                                 const auto* volumeDirectionData = volumeDirectionVector.data();
 
-                                if (globalLength <= start + length - 1) {
+                                if (globalLength <= start + length - 1)
+                                {
                                     length = globalLength - start;
                                 }
 
@@ -189,7 +209,8 @@ void process() {
 
                                 bool bought = false;
                                 double buyPrice = 0;
-                                for (size_t i = 0; i < length; ++i) {
+                                for (size_t i = 0; i < length; ++i)
+                                {
                                     uint bits = 0;
                                     int j = 0;
                                     bits += monthDirectionData[i] << j++;
@@ -203,14 +224,18 @@ void process() {
                                     if (
                                         const auto currentInt = bits;
                                         currentInt == buyInt && !bought
-                                    ) {
+                                    )
+                                    {
                                         buyPrice = highData[i + 2];
                                         bought = true;
-                                    } else if (currentInt == sellInt && bought) {
+                                    }
+                                    else if (currentInt == sellInt && bought)
+                                    {
                                         if (
                                             const double sellPrice = lowData[i + 2];
                                             sellPrice != buyPrice && buyPrice != 0
-                                        ) {
+                                        )
+                                        {
                                             chunkPercent = (sellPrice / buyPrice) * chunkPercent;
                                         }
                                         bought = false;
@@ -220,9 +245,12 @@ void process() {
                             }
                             {
                                 const auto pair = std::pair(buyInt, sellInt);
-                                if (chunkPercent > 1.0) {
+                                if (chunkPercent > 1.0)
+                                {
                                     globalGainCounts[pair] += 1;
-                                } else if (chunkPercent != 1.0) {
+                                }
+                                else if (chunkPercent != 1.0)
+                                {
                                     globalLossCounts[pair] += 1;
                                 }
                                 globalPercent += chunkPercent;
@@ -233,14 +261,18 @@ void process() {
                             if (
                                 const auto pair = std::pair(buyInt, sellInt);
                                 !globalNetData.contains(pair)
-                            ) {
+                            )
+                            {
                                 globalNetData[pair] = globalPercent;
-                            } else {
+                            }
+                            else
+                            {
                                 globalNetData[pair] += globalPercent;
                             }
                             completedTasks++;
                         }
-                        if (completedTasks == countResultsForAll.size() * (countResultsForAll.size() - 1)) {
+                        if (completedTasks == countResultsForAll.size() * (countResultsForAll.size() - 1))
+                        {
                             cv.notify_one();
                         }
                     }
@@ -252,21 +284,25 @@ void process() {
         std::unique_lock lock(mutex);
         cv.wait(
             lock,
-            [&completedTasks, &countResultsForAll] {
+            [&completedTasks, &countResultsForAll]
+            {
                 return completedTasks == countResultsForAll.size() * (countResultsForAll.size() - 1);
             }
         );
     }
 
-    for (const auto& pattern : std::views::keys(globalNetData)) {
+    for (const auto& pattern : std::views::keys(globalNetData))
+    {
         globalNetData[pattern] /= static_cast<double>(directions.size());
     }
 
-    for (const auto& [patternPair, gains] : globalGainCounts) {
+    for (const auto& [patternPair, gains] : globalGainCounts)
+    {
         if (
             const uint losses = globalLossCounts[patternPair];
             losses > 0
-        ) {
+        )
+        {
             double ratio = static_cast<double>(gains) / losses;
             globalWinLossRatios.emplace_back(patternPair, ratio);
         }
@@ -274,7 +310,8 @@ void process() {
 
     std::ranges::sort(
         globalWinLossRatios,
-        [](const auto& lhs, const auto& rhs) {
+        [](const auto& lhs, const auto& rhs)
+        {
             return lhs.second > rhs.second;
         }
     );
@@ -284,35 +321,40 @@ void process() {
     std::string filePath = sps_config::results_data_folder + "results.txt";
     std::ofstream outFile(filePath);
     outFile << "Global Gain Counts:\n";
-    for (const auto& [patternPair, gains] : globalGainCounts) {
+    for (const auto& [patternPair, gains] : globalGainCounts)
+    {
         outFile << "Buy Pattern: " << patternPair.first
             << ", Sell Pattern: " << patternPair.second
             << ", Gains: " << gains << "\n";
     }
 
     outFile << "\nGlobal Loss Counts:\n";
-    for (const auto& [patternPair, losses] : globalLossCounts) {
+    for (const auto& [patternPair, losses] : globalLossCounts)
+    {
         outFile << "Buy Pattern: " << patternPair.first
             << ", Sell Pattern: " << patternPair.second
             << ", Losses: " << losses << "\n";
     }
 
     outFile << "\nGlobal Win/Loss Ratios:\n";
-    for (const auto& [patternPair, ratio] : globalWinLossRatios) {
+    for (const auto& [patternPair, ratio] : globalWinLossRatios)
+    {
         outFile << "Buy Pattern: " << patternPair.first
             << ", Sell Pattern: " << patternPair.second
             << ", Win/Loss Ratio: " << ratio << "\n";
     }
 
     outFile << "\nGlobal Net Data:\n";
-    for (const auto& [patternPair, net] : globalNetData) {
+    for (const auto& [patternPair, net] : globalNetData)
+    {
         outFile << "Buy Pattern: " << patternPair.first
             << ", Sell Pattern: " << patternPair.second
             << ", Net: " << net << "\n";
     }
 }
 
-DirectionData::DirectionData processFirst() {
+DirectionData::DirectionData processFirst()
+{
     const std::string stockDataFilePath = sps_config::intermediate_data_folder + "a.us.txt";
     DirectionData::StockData data = CSV::readStockCSV(stockDataFilePath);
     const std::string symbol = CSV::extract_symbol(stockDataFilePath);
@@ -331,10 +373,12 @@ void readDataFromFile(
     std::vector<std::pair<std::pair<ulong, ulong>, double>>& globalWinLossRatios,
     std::unordered_map<std::pair<ulong, ulong>, double, PairHash>& globalNetData,
     const std::string& filename
-) {
+)
+{
     std::ifstream inFile(filename);
 
-    if (!inFile) {
+    if (!inFile)
+    {
         std::cerr << "Error opening file for reading: " << filename << std::endl;
         return;
     }
@@ -343,50 +387,75 @@ void readDataFromFile(
     bool isCount = false;
     bool isGain = false;
     bool isNet = false;
-    while (std::getline(inFile, line)) {
-        if (!line.empty()) {
-            if (line.find("Global Gain Counts:") != std::string::npos) {
+    while (std::getline(inFile, line))
+    {
+        if (!line.empty())
+        {
+            if (line.find("Global Gain Counts:") != std::string::npos)
+            {
                 isCount = true;
                 isGain = true;
                 isNet = false;
-            } else if (line.find("Global Loss Counts:") != std::string::npos) {
+            }
+            else if (line.find("Global Loss Counts:") != std::string::npos)
+            {
                 isCount = true;
                 isGain = false;
                 isNet = false;
-            } else if (line.find("Global Win/Loss Ratios:") != std::string::npos) {
+            }
+            else if (line.find("Global Win/Loss Ratios:") != std::string::npos)
+            {
                 isCount = false;
                 isNet = false;
-            } else if (line.find("Global Net Data:") != std::string::npos) {
+            }
+            else if (line.find("Global Net Data:") != std::string::npos)
+            {
                 isCount = false;
                 isNet = true;
-            } else {
+            }
+            else
+            {
                 std::istringstream iss(line);
                 std::string token;
                 std::pair<ulong, ulong> patternPair;
                 double value = 0.0;
                 uint count = 0;
 
-                while (std::getline(iss, token, ':')) {
+                while (std::getline(iss, token, ':'))
+                {
                     std::istringstream line_stream(token);
-                    if (count == 1) {
+                    if (count == 1)
+                    {
                         line_stream >> patternPair.first;
-                    } else if (count == 2) {
+                    }
+                    else if (count == 2)
+                    {
                         line_stream >> patternPair.second;
-                    } else if (count == 3) {
+                    }
+                    else if (count == 3)
+                    {
                         line_stream >> value;
                     }
                     ++count;
                 }
 
-                if (isCount) {
-                    if (isGain) {
+                if (isCount)
+                {
+                    if (isGain)
+                    {
                         globalGainCounts.emplace(patternPair, value);
-                    } else {
+                    }
+                    else
+                    {
                         globalLossCounts.emplace(patternPair, value);
                     }
-                } else if (isNet) {
+                }
+                else if (isNet)
+                {
                     globalNetData.emplace(patternPair, value);
-                } else {
+                }
+                else
+                {
                     globalWinLossRatios.emplace_back(patternPair, value);
                 }
             }
@@ -397,153 +466,180 @@ void readDataFromFile(
 }
 
 template <class T>
-struct Hash final : IHash<T> {
-    size_t operator()(const T i) override {
+struct Hash final : IHash<T>
+{
+    size_t operator()(const T i) override
+    {
         return i;
     }
 
-    T to_element(const size_t i) override {
+    T to_element(const size_t i) override
+    {
         return i;
     }
 
-    size_t number_of_elements() override {
+    size_t number_of_elements() override
+    {
         return 2;
     }
 };
 
-int main() {
+int main()
+{
+    move_files_recursively_to_single_folder(
+        sps_config::raw_data_folder,
+        sps_config::intermediate_data_folder
+    );
     timer::logFunctionTime(
-        [] {
-            auto directions = calculateAllDirectionData();
+        []
+        {
+            // auto directions = calculateAllDirectionData();
             auto allStockData = getAllStockData();
-            auto tree = ProbabilityTree<Hash<int>, int>{};
-            for (auto& directionData : std::ranges::views::values(directions)) {
-                tree.add(directionData[CSV::low]);
-            }
-
-            uint globalGainCounts = 0;
-            uint globalLossCounts = 0;
-            double globalWinLossRatios;
-            double globalNetData = 0;
-
-            std::condition_variable cv;
-            std::atomic<size_t> completedTasks = 0;
-
-            thread_pool::ThreadPool::getCPUWorkInstance()->addTask(
-                [
-                    &tree,
-                    &cv, &completedTasks,
-                    &allStockData, &directions,
-                    &globalNetData, &globalGainCounts, &globalLossCounts
-                ] {
-                    double globalPercent = 1.0;
-
-                    for (auto& [symbol, directionData] : directions) {
-                        auto& stockData = allStockData[symbol];
-
-                        const auto globalLength = directionData.begin()->size();
-
-                        const auto& highDataVector = stockData.at(CSV::high);
-                        const auto& lowDataVector = stockData.at(CSV::low);
-                        const auto& lowDirectionVector = directionData.at(CSV::low);
-
-                        constexpr int daysPerYear = 252;
-                        // const int daysPerMonth = 21;
-                        constexpr size_t originalLength = daysPerYear;
-                        size_t length = globalLength;
-                        double chunkPercent = 1.0;
-                        // for (size_t start = 0; start <= globalLength; start += length) {
-                        for (size_t start = globalLength - length; start < globalLength; start += length) {
-                            const auto* highData = highDataVector.data();
-                            const auto* lowData = lowDataVector.data();
-                            const auto* lowDirectionData = lowDirectionVector.data();
-                            if (globalLength <= start + length - 1) {
-                                length = globalLength - start;
-                            }
-
-                            lowData += start;
-                            highData += start;
-
-                            bool bought = false;
-                            double buyPrice = 0;
-                            for (size_t i = 0; i < length - 1; ++i) {
-                                const int currentDirection = lowDirectionData[i];
-                                if (
-                                    const auto prediction = tree.predict(
-                                        {
-                                            lowDirectionData,
-                                            lowDirectionData + i
-                                        }
-                                    );
-                                    prediction.has_value() &&
-                                    currentDirection == 0 && prediction.value() == 1 && !bought
-                                ) {
-                                    buyPrice = highData[i + 2];
-                                    bought = true;
-                                } else if (
-                                    prediction.has_value() &&
-                                    currentDirection == 1 && prediction.value() == 0 && bought
-                                ) {
-                                    if (
-                                        const double sellPrice = lowData[i + 2];
-                                        sellPrice != buyPrice && buyPrice != 0
-                                    ) {
-                                        chunkPercent = (sellPrice / buyPrice) * chunkPercent;
-                                    }
-                                    bought = false;
-                                }
-                            }
-                            length = originalLength;
-                        }
-                        {
-                            if (chunkPercent >= 1.0) {
-                                globalGainCounts += 1;
-                                std::cout << "    " << chunkPercent << std::endl;
-                            } else {
-                                globalLossCounts += 1;
-                                std::cout << chunkPercent << std::endl;
-                            }
-                            globalPercent += chunkPercent;
-                        }
-                    }
-                    {
-                        if (
-                            globalNetData == 0
-                        ) {
-                            globalNetData = globalPercent;
-                        } else {
-                            globalNetData += globalPercent;
-                        }
-                        completedTasks.fetch_add(1);
-                    }
-                    cv.notify_one();
-                }
-            );
-
-            {
-                std::mutex mutex;
-                std::unique_lock lock(mutex);
-                cv.wait(
-                    lock,
-                    [&completedTasks] {
-                        return 1 == completedTasks;
-                    }
-                );
-            }
-
-            globalNetData /= static_cast<double>(directions.size());
-
-            double ratio = static_cast<double>(globalGainCounts) / globalLossCounts;
-            globalWinLossRatios = ratio;
-
-            std::filesystem::create_directory(sps_config::results_data_folder);
-            std::string filePath = sps_config::results_data_folder + "tree_results.txt";
-            std::ofstream outFile(filePath);
-            outFile << "Global Gain Counts: " << globalGainCounts << "\n";
-            outFile << "Global Loss Counts: " << globalLossCounts << "\n";
-            outFile << "Global Win/Loss Ratios: " << globalWinLossRatios << "\n";
-            outFile << "Global Net Data: " << globalNetData << "\n";
-        },
+        //     auto tree = ProbabilityTree<Hash<int>, int>{};
+        //     for (auto& directionData : std::ranges::views::values(directions))
+        //     {
+        //         tree.add(directionData[CSV::low]);
+        //     }
+        //
+        //     uint globalGainCounts = 0;
+        //     uint globalLossCounts = 0;
+        //     double globalWinLossRatios;
+        //     double globalNetData = 0;
+        //
+        //     std::condition_variable cv;
+        //     std::atomic<size_t> completedTasks = 0;
+        //
+        //     thread_pool::ThreadPool::getCPUWorkInstance()->addTask(
+        //         [
+        //             &tree,
+        //             &cv, &completedTasks,
+        //             &allStockData, &directions,
+        //             &globalNetData, &globalGainCounts, &globalLossCounts
+        //         ]
+        //         {
+        //             double globalPercent = 1.0;
+        //
+        //             for (auto& [symbol, directionData] : directions)
+        //             {
+        //                 auto& stockData = allStockData[symbol];
+        //
+        //                 const auto globalLength = directionData.begin()->size();
+        //
+        //                 const auto& highDataVector = stockData.at(CSV::high);
+        //                 const auto& lowDataVector = stockData.at(CSV::low);
+        //                 const auto& lowDirectionVector = directionData.at(CSV::low);
+        //
+        //                 constexpr int daysPerYear = 252;
+        //                 // const int daysPerMonth = 21;
+        //                 constexpr size_t originalLength = daysPerYear;
+        //                 size_t length = globalLength;
+        //                 double chunkPercent = 1.0;
+        //                 // for (size_t start = 0; start <= globalLength; start += length) {
+        //                 for (size_t start = globalLength - length; start < globalLength; start += length)
+        //                 {
+        //                     const auto* highData = highDataVector.data();
+        //                     const auto* lowData = lowDataVector.data();
+        //                     const auto* lowDirectionData = lowDirectionVector.data();
+        //                     if (globalLength <= start + length - 1)
+        //                     {
+        //                         length = globalLength - start;
+        //                     }
+        //
+        //                     lowData += start;
+        //                     highData += start;
+        //
+        //                     bool bought = false;
+        //                     double buyPrice = 0;
+        //                     for (size_t i = 0; i < length - 1; ++i)
+        //                     {
+        //                         const int currentDirection = lowDirectionData[i];
+        //                         if (
+        //                             const auto prediction = tree.predict(
+        //                                 {
+        //                                     lowDirectionData,
+        //                                     lowDirectionData + i
+        //                                 }
+        //                             );
+        //                             prediction.has_value() &&
+        //                             currentDirection == 0 && prediction.value() == 1 && !bought
+        //                         )
+        //                         {
+        //                             buyPrice = highData[i + 2];
+        //                             bought = true;
+        //                         }
+        //                         else if (
+        //                             prediction.has_value() &&
+        //                             currentDirection == 1 && prediction.value() == 0 && bought
+        //                         )
+        //                         {
+        //                             if (
+        //                                 const double sellPrice = lowData[i + 2];
+        //                                 sellPrice != buyPrice && buyPrice != 0
+        //                             )
+        //                             {
+        //                                 chunkPercent = (sellPrice / buyPrice) * chunkPercent;
+        //                             }
+        //                             bought = false;
+        //                         }
+        //                     }
+        //                     length = originalLength;
+        //                 }
+        //                 {
+        //                     if (chunkPercent >= 1.0)
+        //                     {
+        //                         globalGainCounts += 1;
+        //                         std::cout << "    " << chunkPercent << std::endl;
+        //                     }
+        //                     else
+        //                     {
+        //                         globalLossCounts += 1;
+        //                         std::cout << chunkPercent << std::endl;
+        //                     }
+        //                     globalPercent += chunkPercent;
+        //                 }
+        //             }
+        //             {
+        //                 if (
+        //                     globalNetData == 0
+        //                 )
+        //                 {
+        //                     globalNetData = globalPercent;
+        //                 }
+        //                 else
+        //                 {
+        //                     globalNetData += globalPercent;
+        //                 }
+        //                 completedTasks.fetch_add(1);
+        //             }
+        //             cv.notify_one();
+        //         }
+        //     );
+        //
+        //     {
+        //         std::mutex mutex;
+        //         std::unique_lock lock(mutex);
+        //         cv.wait(
+        //             lock,
+        //             [&completedTasks]
+        //             {
+        //                 return 1 == completedTasks;
+        //             }
+        //         );
+        //     }
+        //
+        //     globalNetData /= static_cast<double>(directions.size());
+        //
+        //     double ratio = static_cast<double>(globalGainCounts) / globalLossCounts;
+        //     globalWinLossRatios = ratio;
+        //
+        //     std::filesystem::create_directory(sps_config::results_data_folder);
+        //     std::string filePath = sps_config::results_data_folder + "tree_results.txt";
+        //     std::ofstream outFile(filePath);
+        //     outFile << "Global Gain Counts: " << globalGainCounts << "\n";
+        //     outFile << "Global Loss Counts: " << globalLossCounts << "\n";
+        //     outFile << "Global Win/Loss Ratios: " << globalWinLossRatios << "\n";
+        //     outFile << "Global Net Data: " << globalNetData << "\n";
+         },
         ""
     );
 }
@@ -629,4 +725,3 @@ int main() {
 //     );
 //     return 0;
 // }
-
