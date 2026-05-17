@@ -41,7 +41,7 @@ namespace thread_pool {
         >
         void submit(
             std::vector<std::future<PromiseResult>>& futures,
-            std::function<void(ParameterType&&, std::promise<PromiseResult>&&)> function,
+            std::function<void(ParameterType&, std::promise<PromiseResult>&&)> function,
             ParameterType& data
         ) {
             auto promise = std::promise<PromiseResult>();
@@ -49,11 +49,11 @@ namespace thread_pool {
             addTask(
                 [
                     function = std::move(function),
-                    namedSeries = std::move(data),
+                    &namedSeries = data,
                     promise = std::move(promise)
                 ] mutable {
                     function(
-                        std::move(namedSeries),
+                        namedSeries,
                         std::move(promise)
                     );
                 }
@@ -66,7 +66,7 @@ namespace thread_pool {
             class ParameterType
         >
         std::vector<PromiseResult> createAndRunTasks(
-            std::function<void(ParameterType&&, std::promise<PromiseResult>&&)>&& function,
+            std::function<void(ParameterType&, std::promise<PromiseResult>&&)>&& function,
             DataContainer& allData
         ) {
             std::vector<PromiseResult> results{};

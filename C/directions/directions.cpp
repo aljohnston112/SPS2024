@@ -9,17 +9,17 @@
 #include "../csv/csv_util.h"
 #include "../thread_pool.h"
 
-DirectionData::AllDirectionData calculateAllDirectionData() {
+DirectionData::StockNameToDirectionDataMap readOrCalculateAllDirectionData() {
     auto stockDataFilePaths = getAllFilesPaths(
         sps_config::intermediate_data_folder
     );
 
-    DirectionData::AllDirectionData results{};
+    DirectionData::StockNameToDirectionDataMap results{};
     for (
         auto allDirectionDataResults =
             thread_pool::ThreadPool::getDiskReadInstance()
             ->createAndRunTasks<
-                DirectionData::AllDirectionDataResults,
+                DirectionData::StockNameToDirectionDataPair,
                 std::vector<std::string>,
                 std::string
             >(
@@ -45,10 +45,10 @@ void saveDirectionData(
 
 DirectionData::DirectionData calculateDirectionDataForOne(
     const std::string& destinationFilePath,
-    DirectionData::StockData& stockData
+    DirectionData::RawStockData& stockData
 ) {
     // Add column labels
-    std::vector<DirectionData::NamedSeries> namedSeries{};
+    std::vector<DirectionData::NamedRawDataPair> namedSeries{};
     namedSeries.reserve(stockData.size());
     const auto it = namedSeries.begin();
     for (size_t i = 0; i < stockData.size(); i++) {
@@ -60,12 +60,12 @@ DirectionData::DirectionData calculateDirectionDataForOne(
     }
 
     // Convert to directions
-    DirectionData::DirectionDataResultsVector directionDataResults =
+    DirectionData::NamedDirectionDataTrainingSet directionDataResults =
         thread_pool::ThreadPool::getCPUWorkInstance()
         ->createAndRunTasks<
-            DirectionData::DirectionDataResults,
-            DirectionData::AllNamedSeries,
-            DirectionData::NamedSeries
+            DirectionData::NamedDirectionDataPair,
+            DirectionData::NamedRawDataTrainingSet,
+            DirectionData::NamedRawDataPair
         >(
             calculateDirectionDataForNamedSeries,
             namedSeries
@@ -97,8 +97,8 @@ DirectionData::DirectionData calculateDirectionDataForOne(
 }
 
 void getDirectionData(
-    const std::string&& stockDataFilePath,
-    std::promise<DirectionData::AllDirectionDataResults>&& promise
+    const std::string& stockDataFilePath,
+    std::promise<DirectionData::StockNameToDirectionDataPair>&& promise
 ) {
     std::string symbol = CSV::extract_symbol(stockDataFilePath);
     const std::string directionFilePath =
@@ -111,11 +111,9 @@ void getDirectionData(
     else {
         std::vector<std::vector<double>> data =
             CSV::readStockCSV(stockDataFilePath);
-        directionData = std::move(
-            calculateDirectionDataForOne(
+        directionData = calculateDirectionDataForOne(
                 directionFilePath,
                 data
-            )
         );
     }
 
@@ -129,8 +127,8 @@ void getDirectionData(
 
 
 void calculateDirectionDataForNamedSeries(
-    DirectionData::NamedSeries&& namedSeries,
-    std::promise<DirectionData::DirectionDataResults>&& promise
+    DirectionData::NamedRawDataPair& namedSeries,
+    std::promise<DirectionData::NamedDirectionDataPair>&& promise
 ) {
     auto currentVector = std::vector<int>{};
     for (

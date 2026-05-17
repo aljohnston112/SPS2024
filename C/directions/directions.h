@@ -7,32 +7,26 @@
 #include "../csv/csv_util.h"
 
 namespace DirectionData {
-    using StockData = std::vector<std::vector<double>>;
+    using RawStockData = std::vector<std::vector<double>>;
+    using StockNameToRawDataPair = std::pair<std::string, RawStockData>;
+    using StockNameToRawDataMap = std::map<std::string, RawStockData>;
 
-    using NamedSeries = std::pair<CSV::Column, std::vector<double>>;
-
-    using AllNamedSeries = std::vector<NamedSeries>;
-
-    using AllStockData = std::map<std::string, StockData>;
-
-    using AllStockDataResults = std::pair<std::string, StockData>;
-
-    using DirectionDataResults = std::pair<const CSV::Column, std::vector<int>>;
-
-    using DirectionDataResultsVector = std::vector<DirectionDataResults>;
+    using NamedRawDataPair = std::pair<CSV::Column, std::vector<double>>;
+    using NamedRawDataTrainingSet = std::vector<NamedRawDataPair>;
 
     using DirectionData = std::vector<std::vector<int>>;
+    using StockNameToDirectionDataPair = std::pair<const std::string, DirectionData>;
+    using StockNameToDirectionDataMap = std::map<std::string, DirectionData>;
 
-    using AllDirectionDataResults = std::pair<const std::string, DirectionData>;
-
-    using AllDirectionData = std::map<std::string, DirectionData>;
+    using NamedDirectionDataPair = std::pair<const CSV::Column, std::vector<int>>;
+    using NamedDirectionDataTrainingSet = std::vector<NamedDirectionDataPair>;
 } // namespace DirectionData
 
-DirectionData::AllDirectionData calculateAllDirectionData();
+DirectionData::StockNameToDirectionDataMap readOrCalculateAllDirectionData();
 
 DirectionData::DirectionData calculateDirectionDataForOne(
     const std::string& destinationFilePath,
-    DirectionData::StockData& stockData
+    DirectionData::RawStockData& stockData
 );
 
 void saveDirectionData(
@@ -41,13 +35,13 @@ void saveDirectionData(
 );
 
 void calculateDirectionDataForNamedSeries(
-    DirectionData::NamedSeries&& namedSeries,
-    std::promise<DirectionData::DirectionDataResults>&& promise
+    DirectionData::NamedRawDataPair& namedSeries,
+    std::promise<DirectionData::NamedDirectionDataPair>&& promise
 );
 
 void getDirectionData(
-    const std::string&& stockDataFilePath,
-    std::promise<DirectionData::AllDirectionDataResults>&& promise
+    const std::string& stockDataFilePath,
+    std::promise<DirectionData::StockNameToDirectionDataPair>&& promise
 );
 
 #endif // WAVELET_DIRECTIONS_H
